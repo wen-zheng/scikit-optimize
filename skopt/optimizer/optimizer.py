@@ -653,7 +653,7 @@ class Optimizer(object):
             # print(self._next_x)
 
         # Pack results
-        print("tell: ", self._next_x)
+            print("tell: ", self._next_x)
         result = create_result(self.Xi, self.yi, self.space, self.rng,
                                models=self.models)
 
