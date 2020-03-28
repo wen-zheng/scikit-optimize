@@ -384,17 +384,21 @@ class Optimizer(object):
         # Caching the result with n_points not None. If some new parameters
         # are provided to the ask, the cache_ is not used.
         if (n_points, strategy) in self.cache_:
+            print("if (n_points, strategy) in self.cache_")
             return self.cache_[(n_points, strategy)]
 
         # Copy of the optimizer is made in order to manage the
         # deletion of points with "lie" objective (the copy of
         # oiptimizer is simply discarded)
+        # print("")
         opt = self.copy(random_state=self.rng.randint(0,
                                                       np.iinfo(np.int32).max))
 
         X = []
         for i in range(n_points):
+            print("ask-",i)
             x = opt.ask(next_trial_space=next_trial_space)
+            print("ask-finish-",i, ':', x)
             X.append(x)
 
             ti_available = "ps" in self.acq_func and len(opt.yi) > 0
@@ -429,9 +433,11 @@ class Optimizer(object):
         observations have been `tell`ed, after that `base_estimator` is used
         to determine the next point.
         """
+
         if self._n_initial_points > 0 or self.base_estimator_ is None:
             # this will not make a copy of `self.rng` and hence keep advancing
             # our random state.
+            print("_ask self._n_initial_points > 0")
             if self._initial_samples is None:
                 if next_trial_space is None:
                     return self.space.rvs(random_state=self.rng)[0]
@@ -443,11 +449,13 @@ class Optimizer(object):
                     len(self._initial_samples) - self._n_initial_points]
 
         else:
+            print("_ask self._n_initial_points <= 0")
             if not self.models:
                 raise RuntimeError("Random evaluations exhausted and no "
                                    "model has been fit.")
 
             next_x = self._next_x
+            print("return next_x", next_x)
             min_delta_x = min([self.space.distance(next_x, xi)
                                for xi in self.Xi])
             if abs(min_delta_x) <= 1e-8:
