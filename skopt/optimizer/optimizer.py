@@ -171,7 +171,8 @@ class Optimizer(object):
                  model_queue_size=None,
                  space_size=-1,
                  acq_func_kwargs=None,
-                 acq_optimizer_kwargs=None):
+                 acq_optimizer_kwargs=None,
+                 ):
         self.specs = {"args": copy.copy(inspect.currentframe().f_locals),
                       "function": "Optimizer"}
         self.rng = check_random_state(random_state)
@@ -296,6 +297,7 @@ class Optimizer(object):
             raise TypeError("model_queue_size should be an int or None, "
                             "got {}".format(type(model_queue_size)))
         self.max_model_queue_size = model_queue_size
+
         self.models = []
         self.Xi = []
         self.yi = []
@@ -306,7 +308,7 @@ class Optimizer(object):
         # return same sets of points. Reset to {} at every call to `tell`.
         self.cache_ = {}
 
-    def copy(self, random_state=None):
+    def copy(self, random_state=None, next_trial_space=None):
         """Create a shallow copy of an instance of the optimizer.
 
         Parameters
@@ -330,8 +332,7 @@ class Optimizer(object):
         if hasattr(self, "gains_"):
             optimizer.gains_ = np.copy(self.gains_)
         if self.Xi:
-            optimizer._tell(self.Xi, self.yi)
-
+            optimizer._tell(self.Xi, self.yi, next_trial_space=next_trial_space)
         return optimizer
 
     def ask(self, n_points=None, strategy="cl_min", next_trial_space=None):
@@ -393,7 +394,7 @@ class Optimizer(object):
         # oiptimizer is simply discarded)
         # print("")
         opt = self.copy(random_state=self.rng.randint(0,
-                                                      np.iinfo(np.int32).max))
+                                                      np.iinfo(np.int32).max), next_trial_space=next_trial_space)
 
         X = []
         for i in range(n_points):
@@ -695,14 +696,14 @@ class Optimizer(object):
         result.specs = self.specs
         return result
 
-    def update_next(self):
+    def update_next(self, next_trial_space=None):
         """Updates the value returned by opt.ask(). Useful if a parameter
         was updated after ask was called."""
         self.cache_ = {}
         # Ask for a new next_x.
         # We only need to overwrite _next_x if it exists.
         if hasattr(self, '_next_x'):
-            opt = self.copy(random_state=self.rng)
+            opt = self.copy(random_state=self.rng, next_trial_space=next_trial_space)
             self._next_x = opt._next_x
 
     def get_result(self):
