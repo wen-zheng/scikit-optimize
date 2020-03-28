@@ -598,7 +598,6 @@ class Optimizer(object):
                 # points and the best minimum is used
                 elif self.acq_optimizer == "lbfgs":
                     x0 = X[np.argsort(values)[:self.n_restarts_optimizer]]
-
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
                         # if next_trial_space is None:
@@ -611,18 +610,6 @@ class Optimizer(object):
                                 approx_grad=False,
                                 maxiter=20)
                             for x in x0)
-                        # else:
-                        #     # print('set_next_trial_space')
-                        #     # print(next_trial_space)
-                        #     results = Parallel(n_jobs=self.n_jobs)(
-                        #         delayed(fmin_l_bfgs_b)(
-                        #             gaussian_acquisition_1D, x,
-                        #             args=(est, np.min(self.yi), cand_acq_func,
-                        #                 self.acq_func_kwargs),
-                        #             bounds=next_trial_space.transformed_bounds,
-                        #             approx_grad=False,
-                        #             maxiter=20)
-                        #         for x in x0)
 
                     cand_xs = np.array([r[0] for r in results])
                     cand_acqs = np.array([r[1] for r in results])
@@ -647,8 +634,12 @@ class Optimizer(object):
                 next_x = self.next_xs_[0]
 
             # note the need for [0] at the end
-            self._next_x = self.space.inverse_transform(
-                next_x.reshape((1, -1)))[0]
+            if next_trial_space is None:
+                self._next_x = self.space.inverse_transform(
+                    next_x.reshape((1, -1)))[0]
+            else:
+                self._next_x = next_trial_space.inverse_transform(
+                    next_x.reshape((1, -1)))[0]
             # print('self._next_x')
             # print(self._next_x)
 
