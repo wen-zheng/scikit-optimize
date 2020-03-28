@@ -169,6 +169,7 @@ class Optimizer(object):
                  acq_optimizer="auto",
                  random_state=None,
                  model_queue_size=None,
+                 space_size=-1,
                  acq_func_kwargs=None,
                  acq_optimizer_kwargs=None):
         self.specs = {"args": copy.copy(inspect.currentframe().f_locals),
@@ -298,6 +299,7 @@ class Optimizer(object):
         self.models = []
         self.Xi = []
         self.yi = []
+        self.max_space_size = space_size
 
         # Initialize cache for `ask` method responses
         # This ensures that multiple calls to `ask` with n_points set
@@ -332,7 +334,7 @@ class Optimizer(object):
 
         return optimizer
 
-    def ask(self, n_points=None, strategy="cl_min"):
+    def ask(self, n_points=None, strategy="cl_min", next_trial_space=None):
         """Query point or multiple points at which objective should be evaluated.
 
         n_points : int or None, default: None
@@ -364,7 +366,7 @@ class Optimizer(object):
 
         """
         if n_points is None:
-            return self._ask()
+            return self._ask(next_trial_space=next_trial_space)
 
         supported_strategies = ["cl_min", "cl_mean", "cl_max"]
 
@@ -392,7 +394,7 @@ class Optimizer(object):
 
         X = []
         for i in range(n_points):
-            x = opt.ask()
+            x = opt.ask(next_trial_space=next_trial_space)
             X.append(x)
 
             ti_available = "ps" in self.acq_func and len(opt.yi) > 0
@@ -412,15 +414,15 @@ class Optimizer(object):
             if "ps" in self.acq_func:
                 # Use `_tell()` instead of `tell()` to prevent repeated
                 # log transformations of the computation times.
-                opt._tell(x, (y_lie, t_lie))
+                opt._tell(x, (y_lie, t_lie), next_trial_space=next_trial_space)
             else:
-                opt._tell(x, y_lie)
+                opt._tell(x, y_lie, next_trial_space=next_trial_space)
 
         self.cache_ = {(n_points, strategy): X}  # cache_ the result
 
         return X
 
-    def _ask(self):
+    def _ask(self, next_trial_space=None):
         """Suggest next point at which to evaluate the objective.
 
         Return a random point while not at least `n_initial_points`
@@ -431,7 +433,10 @@ class Optimizer(object):
             # this will not make a copy of `self.rng` and hence keep advancing
             # our random state.
             if self._initial_samples is None:
-                return self.space.rvs(random_state=self.rng)[0]
+                if next_trial_space is None:
+                    return self.space.rvs(random_state=self.rng)[0]
+                else:
+                    return next_trial_space.rvs(random_state=self.rng)[0]
             else:
                 # The samples are evaluated starting form initial_samples[0]
                 return self._initial_samples[
@@ -452,7 +457,7 @@ class Optimizer(object):
             # return point computed from last call to tell()
             return next_x
 
-    def tell(self, x, y, fit=True):
+    def tell(self, x, y, fit=True, next_trial_space=None):
         """Record an observation (or several) of the objective function.
 
         Provide values of the objective function at points suggested by
@@ -490,9 +495,9 @@ class Optimizer(object):
                 y = list(y)
                 y[1] = log(y[1])
 
-        return self._tell(x, y, fit=fit)
+        return self._tell(x, y, fit=fit, next_trial_space=next_trial_space)
 
-    def _tell(self, x, y, fit=True):
+    def _tell(self, x, y, fit=True, next_trial_space=None):
         """Perform the actual work of incorporating one or more new points.
         See `tell()` for the full description.
 
@@ -504,6 +509,7 @@ class Optimizer(object):
                 self.Xi.extend(x)
                 self.yi.extend(y)
                 self._n_initial_points -= len(y)
+
             elif is_listlike(x):
                 self.Xi.append(x)
                 self.yi.append(y)
@@ -521,6 +527,11 @@ class Optimizer(object):
             raise ValueError("Type of arguments `x` (%s) and `y` (%s) "
                              "not compatible." % (type(x), type(y)))
 
+        if self.max_space_size > 0 and len(self.Xi) > self.max_space_size:
+            while len(self.Xi) > self.max_space_size:
+                self.Xi.pop(0)
+                self.yi.pop(0)
+
         # optimizer learned something new - discard cache
         self.cache_ = {}
 
@@ -529,6 +540,7 @@ class Optimizer(object):
         if (fit and self._n_initial_points <= 0 and
                 self.base_estimator_ is not None):
             transformed_bounds = np.array(self.space.transformed_bounds)
+            # transformed_bounds = np.array(self.space.transformed_bounds) if next_trial_space is None else np.array(next_trial_space.transformed_bounds) # right
             est = clone(self.base_estimator_)
 
             with warnings.catch_warnings():
@@ -549,8 +561,10 @@ class Optimizer(object):
 
             # even with BFGS as optimizer we want to sample a large number
             # of points and then pick the best ones as starting points
+            # X = self.space.transform(self.space.rvs(
+            #     n_samples=self.n_points, random_state=self.rng))
             X = self.space.transform(self.space.rvs(
-                n_samples=self.n_points, random_state=self.rng))
+                n_samples=self.n_points, random_state=self.rng)) if next_trial_space is None else self.space.transform(next_trial_space.rvs(n_samples=self.n_points, random_state=self.rng)) # right
 
             self.next_xs_ = []
             for cand_acq_func in self.cand_acq_funcs_:
@@ -571,15 +585,28 @@ class Optimizer(object):
 
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
+                        # if next_trial_space is None:
                         results = Parallel(n_jobs=self.n_jobs)(
                             delayed(fmin_l_bfgs_b)(
                                 gaussian_acquisition_1D, x,
                                 args=(est, np.min(self.yi), cand_acq_func,
-                                      self.acq_func_kwargs),
+                                    self.acq_func_kwargs),
                                 bounds=self.space.transformed_bounds,
                                 approx_grad=False,
                                 maxiter=20)
                             for x in x0)
+                        # else:
+                        #     # print('set_next_trial_space')
+                        #     # print(next_trial_space)
+                        #     results = Parallel(n_jobs=self.n_jobs)(
+                        #         delayed(fmin_l_bfgs_b)(
+                        #             gaussian_acquisition_1D, x,
+                        #             args=(est, np.min(self.yi), cand_acq_func,
+                        #                 self.acq_func_kwargs),
+                        #             bounds=next_trial_space.transformed_bounds,
+                        #             approx_grad=False,
+                        #             maxiter=20)
+                        #         for x in x0)
 
                     cand_xs = np.array([r[0] for r in results])
                     cand_acqs = np.array([r[1] for r in results])
@@ -606,6 +633,8 @@ class Optimizer(object):
             # note the need for [0] at the end
             self._next_x = self.space.inverse_transform(
                 next_x.reshape((1, -1)))[0]
+            # print('self._next_x')
+            # print(self._next_x)
 
         # Pack results
         result = create_result(self.Xi, self.yi, self.space, self.rng,
