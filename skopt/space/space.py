@@ -251,7 +251,7 @@ class Real(Dimension):
     """
     def __init__(self, low, high, prior="uniform", base=10, transform=None,
                  name=None, dtype=np.float):
-        if high <= low:
+        if high < low:
             raise ValueError("the lower bound {} has to be less than the"
                              " upper bound {}".format(low, high))
         self.low = low
@@ -433,7 +433,7 @@ class Integer(Dimension):
     """
     def __init__(self, low, high, prior="uniform", base=10, transform=None,
                  name=None, dtype=np.int64):
-        if high <= low:
+        if high < low:
             raise ValueError("the lower bound {} has to be less than the"
                              " upper bound {}".format(low, high))
         self.low = low
