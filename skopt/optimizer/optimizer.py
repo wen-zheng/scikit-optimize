@@ -634,12 +634,8 @@ class Optimizer(object):
                 next_x = self.next_xs_[0]
 
             # note the need for [0] at the end
-            if next_trial_space is None:
-                self._next_x = self.space.inverse_transform(
-                    next_x.reshape((1, -1)))[0]
-            else:
-                self._next_x = next_trial_space.inverse_transform(
-                    next_x.reshape((1, -1)))[0]
+            self._next_x = self.space.inverse_transform(
+                next_x.reshape((1, -1)))[0]
             # print('self._next_x')
             # print(self._next_x)
 
