@@ -579,10 +579,13 @@ class Optimizer(object):
             # of points and then pick the best ones as starting points
             # X = self.space.transform(self.space.rvs(
             #     n_samples=self.n_points, random_state=self.rng))
-            X = self.space.rvs(n_samples=self.n_points, random_state=self.rng) if next_trial_space is None else next_trial_space.rvs(n_samples=self.n_points, random_state=self.rng)
-            print("X[0] before transform:", X[0])
+            # X = self.space.rvs(n_samples=self.n_points, random_state=self.rng) if next_trial_space is None else next_trial_space.rvs(n_samples=self.n_points, random_state=self.rng)
+            # print("X[0] before transform:", X[0])
             X = self.space.transform(self.space.rvs(
                 n_samples=self.n_points, random_state=self.rng)) if next_trial_space is None else self.space.transform(next_trial_space.rvs(n_samples=self.n_points, random_state=self.rng)) # right
+            transformed_bounds = self.space.transformed_bounds
+            if next_trial_space is not None:
+                transformed_bounds[0] = (X[0][0], X[0][0])
             print("X[0]:", X[0])
             print("self.space.transformed_bounds",self.space.transformed_bounds)
             self.next_xs_ = []
@@ -609,7 +612,8 @@ class Optimizer(object):
                                 gaussian_acquisition_1D, x,
                                 args=(est, np.min(self.yi), cand_acq_func,
                                     self.acq_func_kwargs),
-                                bounds=self.space.transformed_bounds,
+                                # bounds=self.space.transformed_bounds,
+                                bounds=transformed_bounds,
                                 approx_grad=False,
                                 maxiter=20)
                             for x in x0)
@@ -641,8 +645,10 @@ class Optimizer(object):
                 self._next_x = self.space.inverse_transform(
                     next_x.reshape((1, -1)))[0]
             else:
-                self._next_x = next_trial_space.inverse_transform(
+                self._next_x = self.space.inverse_transform(
                     next_x.reshape((1, -1)))[0]
+                # self._next_x = next_trial_space.inverse_transform(
+                #     next_x.reshape((1, -1)))[0]
             # print('self._next_x')
             # print(self._next_x)
 
