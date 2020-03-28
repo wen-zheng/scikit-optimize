@@ -579,9 +579,12 @@ class Optimizer(object):
             # of points and then pick the best ones as starting points
             # X = self.space.transform(self.space.rvs(
             #     n_samples=self.n_points, random_state=self.rng))
+            X = self.space.rvs(n_samples=self.n_points, random_state=self.rng) if next_trial_space is None else next_trial_space.rvs(n_samples=self.n_points, random_state=self.rng)
+            print("X[0] before transform:", X[0])
             X = self.space.transform(self.space.rvs(
                 n_samples=self.n_points, random_state=self.rng)) if next_trial_space is None else self.space.transform(next_trial_space.rvs(n_samples=self.n_points, random_state=self.rng)) # right
             print("X[0]:", X[0])
+            print("self.space.transformed_bounds",self.space.transformed_bounds)
             self.next_xs_ = []
             for cand_acq_func in self.cand_acq_funcs_:
                 values = _gaussian_acquisition(
@@ -634,8 +637,12 @@ class Optimizer(object):
                 next_x = self.next_xs_[0]
 
             # note the need for [0] at the end
-            self._next_x = self.space.inverse_transform(
-                next_x.reshape((1, -1)))[0]
+            if next_trial_space is None:
+                self._next_x = self.space.inverse_transform(
+                    next_x.reshape((1, -1)))[0]
+            else:
+                self._next_x = next_trial_space.inverse_transform(
+                    next_x.reshape((1, -1)))[0]
             # print('self._next_x')
             # print(self._next_x)
 
