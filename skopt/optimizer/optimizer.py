@@ -336,7 +336,7 @@ class Optimizer(object):
         return optimizer
 
     def ask(self, n_points=None, strategy="cl_min", next_trial_space=None):
-        # print("ask:", next_trial_space)
+        print("ask:", next_trial_space)
         """Query point or multiple points at which objective should be evaluated.
 
         n_points : int or None, default: None
@@ -386,7 +386,7 @@ class Optimizer(object):
         # Caching the result with n_points not None. If some new parameters
         # are provided to the ask, the cache_ is not used.
         if (n_points, strategy) in self.cache_:
-            # print("if (n_points, strategy) in self.cache_")
+            print("if (n_points, strategy) in self.cache_")
             return self.cache_[(n_points, strategy)]
 
         # Copy of the optimizer is made in order to manage the
@@ -398,9 +398,9 @@ class Optimizer(object):
 
         X = []
         for i in range(n_points):
-            # print("ask-",i)
+            print("ask-",i)
             x = opt.ask(next_trial_space=next_trial_space)
-            # print("ask-finish-",i, ':', x)
+            print("ask-finish-",i, ':', x)
             X.append(x)
 
             ti_available = "ps" in self.acq_func and len(opt.yi) > 0
@@ -435,34 +435,34 @@ class Optimizer(object):
         observations have been `tell`ed, after that `base_estimator` is used
         to determine the next point.
         """
-        # print ('self._n_initial_points', self._n_initial_points)
+        print ('self._n_initial_points', self._n_initial_points)
         if self._n_initial_points > 0 or self.base_estimator_ is None:
             # this will not make a copy of `self.rng` and hence keep advancing
             # our random state.
-            # print("_ask self._n_initial_points > 0")
+            print("_ask self._n_initial_points > 0")
             if self._initial_samples is None:
-                # print("self._initial_samples is None")
+                print("self._initial_samples is None")
                 if next_trial_space is None:
-                    # print("next_trial_space is None", self.space.rvs(random_state=self.rng)[0])
+                    print("next_trial_space is None", self.space.rvs(random_state=self.rng)[0])
                     return self.space.rvs(random_state=self.rng)[0]
                 else:
-                    # print("next_trial_space is not None", next_trial_space.rvs(random_state=self.rng)[0])
+                    print("next_trial_space is not None", next_trial_space.rvs(random_state=self.rng)[0])
                     return next_trial_space.rvs(random_state=self.rng)[0]
             else:
-                # print("self._initial_samples is not None", self._initial_samples[
-                #     len(self._initial_samples) - self._n_initial_points])
+                print("self._initial_samples is not None", self._initial_samples[
+                    len(self._initial_samples) - self._n_initial_points])
                 # The samples are evaluated starting form initial_samples[0]
                 return self._initial_samples[
                     len(self._initial_samples) - self._n_initial_points]
 
         else:
-            # print("_ask self._n_initial_points <= 0")
+            print("_ask self._n_initial_points <= 0")
             if not self.models:
                 raise RuntimeError("Random evaluations exhausted and no "
                                    "model has been fit.")
 
             next_x = self._next_x
-            # print("return next_x", next_x)
+            print("return next_x", next_x)
             min_delta_x = min([self.space.distance(next_x, xi)
                                for xi in self.Xi])
             if abs(min_delta_x) <= 1e-8:
@@ -518,7 +518,7 @@ class Optimizer(object):
 
         This method exists to give access to the internals of adding points
         by side stepping all input validation and transformation."""
-        # print("tell:", next_trial_space, "self._n_initial_points", self._n_initial_points)
+        print("tell:", next_trial_space, "self._n_initial_points", self._n_initial_points)
         if "ps" in self.acq_func:
             if is_2Dlistlike(x):
                 self.Xi.extend(x)
@@ -554,7 +554,7 @@ class Optimizer(object):
         # random points to using a surrogate model
         if (fit and self._n_initial_points <= 0 and
                 self.base_estimator_ is not None):
-            # print("fit and self._n_initial_points <= 0 and self.base_estimator_ is not None")
+            print("fit and self._n_initial_points <= 0 and self.base_estimator_ is not None")
             transformed_bounds = np.array(self.space.transformed_bounds)
             # transformed_bounds = np.array(self.space.transformed_bounds) if next_trial_space is None else np.array(next_trial_space.transformed_bounds) # right
             est = clone(self.base_estimator_)
@@ -581,7 +581,7 @@ class Optimizer(object):
             #     n_samples=self.n_points, random_state=self.rng))
             X = self.space.transform(self.space.rvs(
                 n_samples=self.n_points, random_state=self.rng)) if next_trial_space is None else self.space.transform(next_trial_space.rvs(n_samples=self.n_points, random_state=self.rng)) # right
-            # print("X[0]:", X[0])
+            print("X[0]:", X[0])
             self.next_xs_ = []
             for cand_acq_func in self.cand_acq_funcs_:
                 values = _gaussian_acquisition(
@@ -653,7 +653,7 @@ class Optimizer(object):
             # print(self._next_x)
 
         # Pack results
-        # print("tell: ", self._next_x)
+        print("tell: ", self._next_x)
         result = create_result(self.Xi, self.yi, self.space, self.rng,
                                models=self.models)
 
