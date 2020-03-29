@@ -583,10 +583,16 @@ class Optimizer(object):
             # print("X[0] before transform:", X[0])
             X = self.space.transform(self.space.rvs(
                 n_samples=self.n_points, random_state=self.rng)) if next_trial_space is None else self.space.transform(next_trial_space.rvs(n_samples=self.n_points, random_state=self.rng)) # right
-            print(next_trial_space.bounds)
+
+            # print(next_trial_space.bounds)
             space_transformed_bounds = self.space.transformed_bounds
             if next_trial_space is not None:
-                space_transformed_bounds[0] = (X[0][0], X[0][0])
+                for i in range(len(next_trial_space.bounds)):
+                    lb, rb = next_trial_space.bounds[i]
+                    if lb == rb:
+                        space_transformed_bounds[i] = (X[0][i], X[0][i])
+
+
             # print("X[0]:", X[0])
             # print("self.space.transformed_bounds",self.space.transformed_bounds)
             self.next_xs_ = []
