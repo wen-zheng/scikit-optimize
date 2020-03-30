@@ -592,7 +592,6 @@ class Optimizer(object):
                     if lb == rb:
                         space_transformed_bounds[i] = (X[0][i], X[0][i])
 
-
             # print("X[0]:", X[0])
             # print("self.space.transformed_bounds",self.space.transformed_bounds)
             self.next_xs_ = []
